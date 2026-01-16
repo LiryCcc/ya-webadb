@@ -1,131 +1,116 @@
-import type { MaybePromiseLike } from "@yume-chan/async";
-import type { ReadableStream, TransformStream } from "@yume-chan/stream-extra";
+import type { MaybePromiseLike } from '@yume-chan/async';
+import type { ReadableStream, TransformStream } from '@yume-chan/stream-extra';
 
 import type {
-    ScrcpyDisplay,
-    ScrcpyEncoder,
-    ScrcpyMediaStreamPacket,
-    ScrcpyOptions,
-    ScrcpyOptionsListEncoders,
-    ScrcpyScrollController,
-    ScrcpyVideoStream,
-} from "../base/index.js";
-import { ScrcpyDeviceMessageParsers } from "../base/index.js";
+  ScrcpyDisplay,
+  ScrcpyEncoder,
+  ScrcpyMediaStreamPacket,
+  ScrcpyOptions,
+  ScrcpyOptionsListEncoders,
+  ScrcpyScrollController,
+  ScrcpyVideoStream
+} from '../base/index.js';
+import { ScrcpyDeviceMessageParsers } from '../base/index.js';
 import type {
-    ScrcpyBackOrScreenOnControlMessage,
-    ScrcpyInjectTouchControlMessage,
-    ScrcpySetClipboardControlMessage,
-} from "../latest.js";
+  ScrcpyBackOrScreenOnControlMessage,
+  ScrcpyInjectTouchControlMessage,
+  ScrcpySetClipboardControlMessage
+} from '../latest.js';
 
-import type { Init } from "./impl/index.js";
+import type { Init } from './impl/index.js';
 import {
-    ClipboardStream,
-    ControlMessageTypes,
-    createMediaStreamTransformer,
-    createScrollController,
-    Defaults,
-    EncoderRegex,
-    parseDisplay,
-    parseEncoder,
-    parseVideoStreamMetadata,
-    serialize,
-    serializeBackOrScreenOnControlMessage,
-    serializeInjectTouchControlMessage,
-    SerializeOrder,
-    serializeSetClipboardControlMessage,
-    setListDisplays,
-    setListEncoders,
-} from "./impl/index.js";
+  ClipboardStream,
+  ControlMessageTypes,
+  createMediaStreamTransformer,
+  createScrollController,
+  Defaults,
+  EncoderRegex,
+  parseDisplay,
+  parseEncoder,
+  parseVideoStreamMetadata,
+  serialize,
+  serializeBackOrScreenOnControlMessage,
+  serializeInjectTouchControlMessage,
+  SerializeOrder,
+  serializeSetClipboardControlMessage,
+  setListDisplays,
+  setListEncoders
+} from './impl/index.js';
 
-export class ScrcpyOptions1_18
-    implements ScrcpyOptions<Init>, ScrcpyOptionsListEncoders
-{
-    static readonly Defaults = Defaults;
+export class ScrcpyOptions1_18 implements ScrcpyOptions<Init>, ScrcpyOptionsListEncoders {
+  static readonly Defaults = Defaults;
 
-    readonly value: Required<Init>;
+  readonly value: Required<Init>;
 
-    get controlMessageTypes(): typeof ControlMessageTypes {
-        return ControlMessageTypes;
+  get controlMessageTypes(): typeof ControlMessageTypes {
+    return ControlMessageTypes;
+  }
+
+  #clipboard: ClipboardStream | undefined;
+  get clipboard(): ReadableStream<string> | undefined {
+    return this.#clipboard;
+  }
+
+  #deviceMessageParsers = new ScrcpyDeviceMessageParsers();
+  get deviceMessageParsers() {
+    return this.#deviceMessageParsers;
+  }
+
+  constructor(init: Init) {
+    this.value = { ...Defaults, ...init };
+
+    if (this.value.control) {
+      this.#clipboard = this.#deviceMessageParsers.add(new ClipboardStream());
     }
+  }
 
-    #clipboard: ClipboardStream | undefined;
-    get clipboard(): ReadableStream<string> | undefined {
-        return this.#clipboard;
-    }
+  serialize(): string[] {
+    return serialize(this.value, SerializeOrder);
+  }
 
-    #deviceMessageParsers = new ScrcpyDeviceMessageParsers();
-    get deviceMessageParsers() {
-        return this.#deviceMessageParsers;
-    }
+  setListDisplays(): void {
+    setListDisplays(this.value);
+  }
 
-    constructor(init: Init) {
-        this.value = { ...Defaults, ...init };
+  parseDisplay(line: string): ScrcpyDisplay | undefined {
+    return parseDisplay(line);
+  }
 
-        if (this.value.control) {
-            this.#clipboard = this.#deviceMessageParsers.add(
-                new ClipboardStream(),
-            );
-        }
-    }
+  setListEncoders() {
+    setListEncoders(this.value);
+  }
 
-    serialize(): string[] {
-        return serialize(this.value, SerializeOrder);
-    }
+  parseEncoder(line: string): ScrcpyEncoder | undefined {
+    return parseEncoder(line, EncoderRegex);
+  }
 
-    setListDisplays(): void {
-        setListDisplays(this.value);
-    }
+  parseVideoStreamMetadata(stream: ReadableStream<Uint8Array>): MaybePromiseLike<ScrcpyVideoStream> {
+    return parseVideoStreamMetadata(stream);
+  }
 
-    parseDisplay(line: string): ScrcpyDisplay | undefined {
-        return parseDisplay(line);
-    }
+  createMediaStreamTransformer(): TransformStream<Uint8Array, ScrcpyMediaStreamPacket> {
+    return createMediaStreamTransformer(this.value);
+  }
 
-    setListEncoders() {
-        setListEncoders(this.value);
-    }
+  serializeInjectTouchControlMessage(message: ScrcpyInjectTouchControlMessage): Uint8Array {
+    return serializeInjectTouchControlMessage(message);
+  }
 
-    parseEncoder(line: string): ScrcpyEncoder | undefined {
-        return parseEncoder(line, EncoderRegex);
-    }
+  serializeBackOrScreenOnControlMessage(message: ScrcpyBackOrScreenOnControlMessage): Uint8Array | undefined {
+    return serializeBackOrScreenOnControlMessage(message);
+  }
 
-    parseVideoStreamMetadata(
-        stream: ReadableStream<Uint8Array>,
-    ): MaybePromiseLike<ScrcpyVideoStream> {
-        return parseVideoStreamMetadata(stream);
-    }
+  serializeSetClipboardControlMessage(message: ScrcpySetClipboardControlMessage): Uint8Array {
+    return serializeSetClipboardControlMessage(message);
+  }
 
-    createMediaStreamTransformer(): TransformStream<
-        Uint8Array,
-        ScrcpyMediaStreamPacket
-    > {
-        return createMediaStreamTransformer(this.value);
-    }
-
-    serializeInjectTouchControlMessage(
-        message: ScrcpyInjectTouchControlMessage,
-    ): Uint8Array {
-        return serializeInjectTouchControlMessage(message);
-    }
-
-    serializeBackOrScreenOnControlMessage(
-        message: ScrcpyBackOrScreenOnControlMessage,
-    ): Uint8Array | undefined {
-        return serializeBackOrScreenOnControlMessage(message);
-    }
-
-    serializeSetClipboardControlMessage(
-        message: ScrcpySetClipboardControlMessage,
-    ): Uint8Array {
-        return serializeSetClipboardControlMessage(message);
-    }
-
-    createScrollController(): ScrcpyScrollController {
-        return createScrollController();
-    }
+  createScrollController(): ScrcpyScrollController {
+    return createScrollController();
+  }
 }
 
 type Init_ = Init;
 
 export namespace ScrcpyOptions1_18 {
-    export type Init = Init_;
+  export type Init = Init_;
 }

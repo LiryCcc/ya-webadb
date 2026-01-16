@@ -1,5 +1,5 @@
 ---
-"@yume-chan/adb-credential-web": major
+'@yume-chan/adb-credential-web': major
 ---
 
 Separate private key creation and storage.

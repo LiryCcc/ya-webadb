@@ -1,15 +1,15 @@
 {
-    "name": "@yume-chan/package-lint",
-    "private": true,
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
-    "scripts": {},
-    "keywords": [],
-    "dependencies": {
-        "@types/node": "^25.0.3",
-        "json5": "^2.2.3"
-    },
-    "author": "",
-    "license": "MIT"
+  "name": "@yume-chan/package-lint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "",
+  "main": "index.js",
+  "scripts": {},
+  "dependencies": {
+    "@types/node": "^25.0.3",
+    "json5": "^2.2.3"
+  }
 }

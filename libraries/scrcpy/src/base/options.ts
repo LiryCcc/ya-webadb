@@ -1,80 +1,63 @@
-import type { MaybePromiseLike } from "@yume-chan/async";
-import type { ReadableStream, TransformStream } from "@yume-chan/stream-extra";
+import type { MaybePromiseLike } from '@yume-chan/async';
+import type { ReadableStream, TransformStream } from '@yume-chan/stream-extra';
 
 import type {
-    ScrcpyBackOrScreenOnControlMessage,
-    ScrcpyInjectTouchControlMessage,
-    ScrcpySetClipboardControlMessage,
-    ScrcpyUHidCreateControlMessage,
-    ScrcpyUHidOutputDeviceMessage,
-} from "../latest.js";
+  ScrcpyBackOrScreenOnControlMessage,
+  ScrcpyInjectTouchControlMessage,
+  ScrcpySetClipboardControlMessage,
+  ScrcpyUHidCreateControlMessage,
+  ScrcpyUHidOutputDeviceMessage
+} from '../latest.js';
 
-import type { ScrcpyAudioStreamMetadata } from "./audio.js";
-import type { ScrcpyControlMessageType } from "./control-message-type.js";
-import type { ScrcpyDeviceMessageParsers } from "./device-message.js";
-import type { ScrcpyDisplay } from "./display.js";
-import type { ScrcpyEncoder } from "./encoder.js";
-import type { ScrcpyMediaStreamPacket } from "./media.js";
-import type { ScrcpyScrollController } from "./scroll-controller.js";
-import type { ScrcpyVideoStream } from "./video.js";
+import type { ScrcpyAudioStreamMetadata } from './audio.js';
+import type { ScrcpyControlMessageType } from './control-message-type.js';
+import type { ScrcpyDeviceMessageParsers } from './device-message.js';
+import type { ScrcpyDisplay } from './display.js';
+import type { ScrcpyEncoder } from './encoder.js';
+import type { ScrcpyMediaStreamPacket } from './media.js';
+import type { ScrcpyScrollController } from './scroll-controller.js';
+import type { ScrcpyVideoStream } from './video.js';
 
-export type ScrcpyControlMessageTypeMap = Partial<
-    Record<ScrcpyControlMessageType, number>
->;
+export type ScrcpyControlMessageTypeMap = Partial<Record<ScrcpyControlMessageType, number>>;
 
 export interface ScrcpyOptions<T extends object> {
-    get controlMessageTypes(): ScrcpyControlMessageTypeMap;
+  get controlMessageTypes(): ScrcpyControlMessageTypeMap;
 
-    value: Required<T>;
+  value: Required<T>;
 
-    readonly clipboard?: ReadableStream<string> | undefined;
+  readonly clipboard?: ReadableStream<string> | undefined;
 
-    readonly uHidOutput?:
-        | ReadableStream<ScrcpyUHidOutputDeviceMessage>
-        | undefined;
+  readonly uHidOutput?: ReadableStream<ScrcpyUHidOutputDeviceMessage> | undefined;
 
-    readonly deviceMessageParsers: ScrcpyDeviceMessageParsers;
+  readonly deviceMessageParsers: ScrcpyDeviceMessageParsers;
 
-    serialize(): string[];
+  serialize(): string[];
 
-    setListDisplays(): void;
+  setListDisplays(): void;
 
-    parseDisplay(line: string): ScrcpyDisplay | undefined;
+  parseDisplay(line: string): ScrcpyDisplay | undefined;
 
-    parseVideoStreamMetadata(
-        stream: ReadableStream<Uint8Array>,
-    ): MaybePromiseLike<ScrcpyVideoStream>;
+  parseVideoStreamMetadata(stream: ReadableStream<Uint8Array>): MaybePromiseLike<ScrcpyVideoStream>;
 
-    parseAudioStreamMetadata?(
-        stream: ReadableStream<Uint8Array>,
-    ): MaybePromiseLike<ScrcpyAudioStreamMetadata>;
+  parseAudioStreamMetadata?(stream: ReadableStream<Uint8Array>): MaybePromiseLike<ScrcpyAudioStreamMetadata>;
 
-    createMediaStreamTransformer(): TransformStream<
-        Uint8Array,
-        ScrcpyMediaStreamPacket
-    >;
+  createMediaStreamTransformer(): TransformStream<Uint8Array, ScrcpyMediaStreamPacket>;
 
-    serializeInjectTouchControlMessage(
-        message: ScrcpyInjectTouchControlMessage,
-    ): Uint8Array;
+  serializeInjectTouchControlMessage(message: ScrcpyInjectTouchControlMessage): Uint8Array;
 
-    serializeBackOrScreenOnControlMessage(
-        message: ScrcpyBackOrScreenOnControlMessage,
-    ): Uint8Array | undefined;
+  serializeBackOrScreenOnControlMessage(message: ScrcpyBackOrScreenOnControlMessage): Uint8Array | undefined;
 
-    serializeSetClipboardControlMessage(
-        message: ScrcpySetClipboardControlMessage,
-    ): Uint8Array | [Uint8Array, Promise<void>];
+  serializeSetClipboardControlMessage(
+    message: ScrcpySetClipboardControlMessage
+  ): Uint8Array | [Uint8Array, Promise<void>];
 
-    createScrollController(): ScrcpyScrollController;
+  createScrollController(): ScrcpyScrollController;
 
-    serializeUHidCreateControlMessage?(
-        message: ScrcpyUHidCreateControlMessage,
-    ): Uint8Array;
+  serializeUHidCreateControlMessage?(message: ScrcpyUHidCreateControlMessage): Uint8Array;
 }
 
 export interface ScrcpyOptionsListEncoders {
-    setListEncoders(): void;
+  setListEncoders(): void;
 
-    parseEncoder(line: string): ScrcpyEncoder | undefined;
+  parseEncoder(line: string): ScrcpyEncoder | undefined;
 }

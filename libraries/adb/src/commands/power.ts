@@ -3,61 +3,58 @@
 // cspell: ignore keyevent
 // cspell: ignore longpress
 
-import { AdbServiceBase } from "./base.js";
+import { AdbServiceBase } from './base.js';
 
 export class AdbPower extends AdbServiceBase {
-    reboot(mode = "") {
-        return this.adb.createSocketAndWait(`reboot:${mode}`);
-    }
+  reboot(mode = '') {
+    return this.adb.createSocketAndWait(`reboot:${mode}`);
+  }
 
-    bootloader() {
-        return this.reboot("bootloader");
-    }
+  bootloader() {
+    return this.reboot('bootloader');
+  }
 
-    fastboot() {
-        return this.reboot("fastboot");
-    }
+  fastboot() {
+    return this.reboot('fastboot');
+  }
 
-    recovery() {
-        return this.reboot("recovery");
-    }
+  recovery() {
+    return this.reboot('recovery');
+  }
 
-    sideload() {
-        return this.reboot("sideload");
-    }
+  sideload() {
+    return this.reboot('sideload');
+  }
 
-    /**
-     * Reboot to Qualcomm Emergency Download (EDL) Mode.
-     *
-     * Only works on some Qualcomm devices.
-     */
-    qualcommEdlMode() {
-        return this.reboot("edl");
-    }
+  /**
+   * Reboot to Qualcomm Emergency Download (EDL) Mode.
+   *
+   * Only works on some Qualcomm devices.
+   */
+  qualcommEdlMode() {
+    return this.reboot('edl');
+  }
 
-    powerOff(): Promise<string> {
-        return this.adb.subprocess.noneProtocol
-            .spawn(["reboot", "-p"])
-            .wait()
-            .toString();
-    }
+  powerOff(): Promise<string> {
+    return this.adb.subprocess.noneProtocol.spawn(['reboot', '-p']).wait().toString();
+  }
 
-    powerButton(longPress = false): Promise<string> {
-        const args = ["input", "keyevent"];
-        if (longPress) {
-            args.push("--longpress");
-        }
-        args.push("POWER");
-
-        return this.adb.subprocess.noneProtocol.spawn(args).wait().toString();
+  powerButton(longPress = false): Promise<string> {
+    const args = ['input', 'keyevent'];
+    if (longPress) {
+      args.push('--longpress');
     }
+    args.push('POWER');
 
-    /**
-     * Reboot to Samsung Odin download mode.
-     *
-     * Only works on Samsung devices.
-     */
-    samsungOdin() {
-        return this.reboot("download");
-    }
+    return this.adb.subprocess.noneProtocol.spawn(args).wait().toString();
+  }
+
+  /**
+   * Reboot to Samsung Odin download mode.
+   *
+   * Only works on Samsung devices.
+   */
+  samsungOdin() {
+    return this.reboot('download');
+  }
 }

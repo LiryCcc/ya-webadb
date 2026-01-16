@@ -1,26 +1,26 @@
-import { AccumulateStream } from "@yume-chan/stream-extra";
-import { TextDecoder } from "@yume-chan/struct";
+import { AccumulateStream } from '@yume-chan/stream-extra';
+import { TextDecoder } from '@yume-chan/struct';
 
 export function escapeArg(s: string) {
-    let result = "";
-    result += `'`;
+  let result = '';
+  result += `'`;
 
-    let base = 0;
-    while (true) {
-        const found = s.indexOf(`'`, base);
-        if (found === -1) {
-            result += s.substring(base);
-            break;
-        }
-        result += s.substring(base, found);
-        // a'b becomes 'a'\'b', which is 'a' + \' + 'b'
-        // (quoted string 'a', escaped single quote, and quoted string 'b')
-        result += String.raw`'\''`;
-        base = found + 1;
+  let base = 0;
+  while (true) {
+    const found = s.indexOf(`'`, base);
+    if (found === -1) {
+      result += s.substring(base);
+      break;
     }
+    result += s.substring(base, found);
+    // a'b becomes 'a'\'b', which is 'a' + \' + 'b'
+    // (quoted string 'a', escaped single quote, and quoted string 'b')
+    result += String.raw`'\''`;
+    base = found + 1;
+  }
 
-    result += `'`;
-    return result;
+  result += `'`;
+  return result;
 }
 
 /**
@@ -31,46 +31,46 @@ export function escapeArg(s: string) {
  * @returns An array of string containing the arguments
  */
 export function splitCommand(input: string): string[] {
-    const result: string[] = [];
-    let quote: string | undefined;
-    let isEscaped = false;
-    let start = 0;
+  const result: string[] = [];
+  let quote: string | undefined;
+  let isEscaped = false;
+  let start = 0;
 
-    for (let i = 0, len = input.length; i < len; i += 1) {
-        if (isEscaped) {
-            isEscaped = false;
-            continue;
-        }
-
-        const char = input.charAt(i);
-        switch (char) {
-            case " ":
-                if (!quote) {
-                    if (i !== start) {
-                        result.push(input.substring(start, i));
-                    }
-                    start = i + 1;
-                }
-                break;
-            case "'":
-            case '"':
-                if (!quote) {
-                    quote = char;
-                } else if (char === quote) {
-                    quote = undefined;
-                }
-                break;
-            case "\\":
-                isEscaped = true;
-                break;
-        }
+  for (let i = 0, len = input.length; i < len; i += 1) {
+    if (isEscaped) {
+      isEscaped = false;
+      continue;
     }
 
-    if (start < input.length) {
-        result.push(input.substring(start));
+    const char = input.charAt(i);
+    switch (char) {
+      case ' ':
+        if (!quote) {
+          if (i !== start) {
+            result.push(input.substring(start, i));
+          }
+          start = i + 1;
+        }
+        break;
+      case "'":
+      case '"':
+        if (!quote) {
+          quote = char;
+        } else if (char === quote) {
+          quote = undefined;
+        }
+        break;
+      case '\\':
+        isEscaped = true;
+        break;
     }
+  }
 
-    return result;
+  if (start < input.length) {
+    result.push(input.substring(start));
+  }
+
+  return result;
 }
 
 // Omit `Symbol.toStringTag` so it's incompatible with `Promise`.
@@ -99,68 +99,68 @@ export type LazyPromise<T, U> = Omit<Promise<T>, typeof Symbol.toStringTag> & U;
  * @returns
  * A `Promise`-like object that runs `initializer` when used as a `Promise`, and contains `methods`.
  */
-export function createLazyPromise<
-    T,
-    U extends Record<PropertyKey, () => unknown>,
->(initializer: () => Promise<T>, methods: U): LazyPromise<T, U> {
-    let promise: Promise<T> | undefined;
+export function createLazyPromise<T, U extends Record<PropertyKey, () => unknown>>(
+  initializer: () => Promise<T>,
+  methods: U
+): LazyPromise<T, U> {
+  let promise: Promise<T> | undefined;
 
-    const getOrCreatePromise = () => {
-        if (!promise) {
-            promise = initializer();
-        }
-        return promise;
-    };
-
-    const result = {
-        // biome-ignore lint/suspicious/noThenProperty: This object is intentionally thenable
-        then(onfulfilled, onrejected) {
-            return getOrCreatePromise().then(onfulfilled, onrejected);
-        },
-        // biome-ignore lint/suspicious/noThenProperty: This object is intentionally thenable
-        catch(onrejected) {
-            return getOrCreatePromise().catch(onrejected);
-        },
-        // biome-ignore lint/suspicious/noThenProperty: This object is intentionally thenable
-        finally(onfinally) {
-            return getOrCreatePromise().finally(onfinally);
-        },
-        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    } satisfies LazyPromise<T, {}> as LazyPromise<T, U>;
-
-    for (const [key, value] of Object.entries(methods)) {
-        Object.defineProperty(result, key, {
-            configurable: true,
-            writable: true,
-            enumerable: false,
-            value,
-        });
+  const getOrCreatePromise = () => {
+    if (!promise) {
+      promise = initializer();
     }
+    return promise;
+  };
 
-    return result;
+  const result = {
+    // biome-ignore lint/suspicious/noThenProperty: This object is intentionally thenable
+    then(onfulfilled, onrejected) {
+      return getOrCreatePromise().then(onfulfilled, onrejected);
+    },
+    // biome-ignore lint/suspicious/noThenProperty: This object is intentionally thenable
+    catch(onrejected) {
+      return getOrCreatePromise().catch(onrejected);
+    },
+    // biome-ignore lint/suspicious/noThenProperty: This object is intentionally thenable
+    finally(onfinally) {
+      return getOrCreatePromise().finally(onfinally);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  } satisfies LazyPromise<T, {}> as LazyPromise<T, U>;
+
+  for (const [key, value] of Object.entries(methods)) {
+    Object.defineProperty(result, key, {
+      configurable: true,
+      writable: true,
+      enumerable: false,
+      value
+    });
+  }
+
+  return result;
 }
 
 export class ToArrayStream<T> extends AccumulateStream<T, T[]> {
-    constructor() {
-        super(
-            [],
-            (chunk, current) => {
-                current.push(chunk);
-                return current;
-            },
-            (output) => output,
-        );
-    }
+  constructor() {
+    super(
+      [],
+      (chunk, current) => {
+        current.push(chunk);
+        return current;
+      },
+      (output) => output
+    );
+  }
 }
 
 export function decodeUtf8Chunked(chunks: Uint8Array[]): string {
-    // PERF: `TextDecoder`'s `stream` mode can decode from `chunks` directly.
-    // This avoids an extra allocation and copy.
-    const decoder = new TextDecoder();
-    let output = "";
-    for (const chunk of chunks) {
-        output += decoder.decode(chunk, { stream: true });
-    }
-    output += decoder.decode();
-    return output;
+  // PERF: `TextDecoder`'s `stream` mode can decode from `chunks` directly.
+  // This avoids an extra allocation and copy.
+  const decoder = new TextDecoder();
+  let output = '';
+  for (const chunk of chunks) {
+    output += decoder.decode(chunk, { stream: true });
+  }
+  output += decoder.decode();
+  return output;
 }

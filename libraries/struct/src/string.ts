@@ -1,28 +1,26 @@
-import type { BufferLengthConverter } from "./buffer.js";
-import { buffer } from "./buffer.js";
-import type { Field } from "./field/index.js";
-import { decodeUtf8, encodeUtf8 } from "./utils.js";
+import type { BufferLengthConverter } from './buffer.js';
+import { buffer } from './buffer.js';
+import type { Field } from './field/index.js';
+import { decodeUtf8, encodeUtf8 } from './utils.js';
 
 export interface String {
-    (length: number): Field<string, never, never> & {
-        as: <T>(infer: T) => Field<T, never, never>;
-    };
+  (length: number): Field<string, never, never> & {
+    as: <T>(infer: T) => Field<T, never, never>;
+  };
 
-    <K extends string>(
-        lengthField: K,
-    ): Field<string, K, Record<K, number>> & {
-        as: <T>(infer: T) => Field<T, K, Record<K, number>>;
-    };
+  <K extends string>(
+    lengthField: K
+  ): Field<string, K, Record<K, number>> & {
+    as: <T>(infer: T) => Field<T, K, Record<K, number>>;
+  };
 
-    <const K extends string, KT>(
-        length: BufferLengthConverter<K, KT>,
-    ): Field<string, K, Record<K, KT>> & {
-        as: <T>(infer: T) => Field<T, K, Record<K, KT>>;
-    };
+  <const K extends string, KT>(
+    length: BufferLengthConverter<K, KT>
+  ): Field<string, K, Record<K, KT>> & {
+    as: <T>(infer: T) => Field<T, K, Record<K, KT>>;
+  };
 
-    <KOmitInit extends string, KS>(
-        length: Field<number, KOmitInit, KS>,
-    ): Field<string, KOmitInit, KS>;
+  <KOmitInit extends string, KS>(length: Field<number, KOmitInit, KS>): Field<string, KOmitInit, KS>;
 }
 
 // Prettier will move the annotation and make it invalid

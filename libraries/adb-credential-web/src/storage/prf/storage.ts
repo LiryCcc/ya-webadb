@@ -1,14 +1,9 @@
-import type { MaybeError } from "@yume-chan/adb";
-import {
-    buffer,
-    struct,
-    u16,
-    Uint8ArrayExactReadable,
-} from "@yume-chan/struct";
+import type { MaybeError } from '@yume-chan/adb';
+import { buffer, struct, u16, Uint8ArrayExactReadable } from '@yume-chan/struct';
 
-import type { TangoKey, TangoKeyStorage } from "../type.js";
+import type { TangoKey, TangoKeyStorage } from '../type.js';
 
-import type { TangoPrfSource } from "./source.js";
+import type { TangoPrfSource } from './source.js';
 
 // PRF generally uses FIDO HMAC secret extension, which uses HMAC with SHA-256,
 // and this input is used as salt, so should be 32 bytes
@@ -20,177 +15,160 @@ const HkdfSaltLength = 64;
 const AesIvLength = 12;
 
 async function deriveAesKey(
-    source: BufferSource,
-    info: Uint8Array<ArrayBuffer>,
-    salt: Uint8Array<ArrayBuffer>,
+  source: BufferSource,
+  info: Uint8Array<ArrayBuffer>,
+  salt: Uint8Array<ArrayBuffer>
 ): Promise<CryptoKey> {
-    const baseKey = await crypto.subtle.importKey(
-        "raw",
-        source,
-        "HKDF",
-        false,
-        ["deriveKey"],
-    );
+  const baseKey = await crypto.subtle.importKey('raw', source, 'HKDF', false, ['deriveKey']);
 
-    return await crypto.subtle.deriveKey(
-        {
-            name: "HKDF",
-            hash: "SHA-512",
-            info,
-            salt,
-        } satisfies globalThis.HkdfParams,
-        baseKey,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt", "decrypt"],
-    );
+  return await crypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-512',
+      info,
+      salt
+    } satisfies globalThis.HkdfParams,
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
 }
 
 function toUint8Array(source: BufferSource) {
-    if (source instanceof ArrayBuffer) {
-        return new Uint8Array(source);
-    }
-    return new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
+  if (source instanceof ArrayBuffer) {
+    return new Uint8Array(source);
+  }
+  return new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
 }
 
 const Bundle = struct(
-    {
-        id: buffer(u16),
-        prfInput: buffer(PrfInputLength),
-        hkdfInfo: buffer(HkdfInfoLength),
-        hkdfSalt: buffer(HkdfSaltLength),
-        aesIv: buffer(AesIvLength),
-        encrypted: buffer(u16),
-    },
-    { littleEndian: true },
+  {
+    id: buffer(u16),
+    prfInput: buffer(PrfInputLength),
+    hkdfInfo: buffer(HkdfInfoLength),
+    hkdfSalt: buffer(HkdfSaltLength),
+    aesIv: buffer(AesIvLength),
+    encrypted: buffer(u16)
+  },
+  { littleEndian: true }
 );
 
 /**
  * A `TangoDataStorage` that encrypts and decrypts data using PRF
  */
 export class TangoPrfStorage implements TangoKeyStorage {
-    readonly #storage: TangoKeyStorage;
-    readonly #source: TangoPrfSource;
-    #prevId: Uint8Array<ArrayBuffer> | undefined;
+  readonly #storage: TangoKeyStorage;
+  readonly #source: TangoPrfSource;
+  #prevId: Uint8Array<ArrayBuffer> | undefined;
 
-    /**
-     * Creates a new instance of `TangoPrfStorage`
-     *
-     * @param storage Another `TangoDataStorage` to store and retrieve the encrypted data
-     * @param source The `TangoPrfSource` to generate PRF output
-     */
-    constructor(storage: TangoKeyStorage, source: TangoPrfSource) {
-        this.#storage = storage;
-        this.#source = source;
+  /**
+   * Creates a new instance of `TangoPrfStorage`
+   *
+   * @param storage Another `TangoDataStorage` to store and retrieve the encrypted data
+   * @param source The `TangoPrfSource` to generate PRF output
+   */
+  constructor(storage: TangoKeyStorage, source: TangoPrfSource) {
+    this.#storage = storage;
+    this.#source = source;
+  }
+
+  async save(privateKey: Uint8Array<ArrayBuffer>, name: string | undefined): Promise<undefined> {
+    const prfInput = new Uint8Array(PrfInputLength);
+    crypto.getRandomValues(prfInput);
+
+    // Maybe reuse the credential, but use different PRF input and HKDF params
+    let id: Uint8Array<ArrayBuffer>;
+    let prfOutput: BufferSource;
+    if (this.#prevId) {
+      prfOutput = await this.#source.get(this.#prevId, prfInput);
+      id = this.#prevId;
+    } else {
+      ({ output: prfOutput, id } = await this.#source.create(prfInput));
+      this.#prevId = id;
     }
 
-    async save(
-        privateKey: Uint8Array<ArrayBuffer>,
-        name: string | undefined,
-    ): Promise<undefined> {
-        const prfInput = new Uint8Array(PrfInputLength);
-        crypto.getRandomValues(prfInput);
+    const info = new Uint8Array(HkdfInfoLength);
+    crypto.getRandomValues(info);
 
-        // Maybe reuse the credential, but use different PRF input and HKDF params
-        let id: Uint8Array<ArrayBuffer>;
-        let prfOutput: BufferSource;
-        if (this.#prevId) {
-            prfOutput = await this.#source.get(this.#prevId, prfInput);
-            id = this.#prevId;
-        } else {
-            ({ output: prfOutput, id } = await this.#source.create(prfInput));
-            this.#prevId = id;
-        }
+    const salt = new Uint8Array(HkdfSaltLength);
+    crypto.getRandomValues(salt);
 
-        const info = new Uint8Array(HkdfInfoLength);
-        crypto.getRandomValues(info);
+    let aesKey: CryptoKey;
+    try {
+      aesKey = await deriveAesKey(prfOutput, info, salt);
+    } finally {
+      // Clear secret memory
+      toUint8Array(prfOutput).fill(0);
+    }
 
-        const salt = new Uint8Array(HkdfSaltLength);
-        crypto.getRandomValues(salt);
+    const iv = new Uint8Array(AesIvLength);
+    crypto.getRandomValues(iv);
+
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, privateKey);
+
+    const bundle = Bundle.serialize({
+      id,
+      prfInput,
+      hkdfInfo: info,
+      hkdfSalt: salt,
+      aesIv: iv,
+      encrypted: new Uint8Array(encrypted)
+    });
+
+    await this.#storage.save(bundle, name);
+  }
+
+  async *load(): AsyncGenerator<MaybeError<TangoKey>, void, void> {
+    for await (const result of this.#storage.load()) {
+      if (result instanceof Error) {
+        yield result;
+        continue;
+      }
+
+      const { privateKey: serialized, name } = result;
+
+      try {
+        const bundle = Bundle.deserialize(new Uint8ArrayExactReadable(serialized));
+
+        const prfOutput = await this.#source.get(
+          bundle.id as Uint8Array<ArrayBuffer>,
+          bundle.prfInput as Uint8Array<ArrayBuffer>
+        );
+
+        this.#prevId = bundle.id as Uint8Array<ArrayBuffer>;
 
         let aesKey: CryptoKey;
         try {
-            aesKey = await deriveAesKey(prfOutput, info, salt);
+          aesKey = await deriveAesKey(
+            prfOutput,
+            bundle.hkdfInfo as Uint8Array<ArrayBuffer>,
+            bundle.hkdfSalt as Uint8Array<ArrayBuffer>
+          );
         } finally {
-            // Clear secret memory
-            toUint8Array(prfOutput).fill(0);
+          // Clear secret memory
+          toUint8Array(prfOutput).fill(0);
         }
 
-        const iv = new Uint8Array(AesIvLength);
-        crypto.getRandomValues(iv);
-
-        const encrypted = await crypto.subtle.encrypt(
-            { name: "AES-GCM", iv },
-            aesKey,
-            privateKey,
+        const decrypted = await crypto.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: bundle.aesIv as Uint8Array<ArrayBuffer>
+          },
+          aesKey,
+          bundle.encrypted as Uint8Array<ArrayBuffer>
         );
 
-        const bundle = Bundle.serialize({
-            id,
-            prfInput,
-            hkdfInfo: info,
-            hkdfSalt: salt,
-            aesIv: iv,
-            encrypted: new Uint8Array(encrypted),
-        });
-
-        await this.#storage.save(bundle, name);
-    }
-
-    async *load(): AsyncGenerator<MaybeError<TangoKey>, void, void> {
-        for await (const result of this.#storage.load()) {
-            if (result instanceof Error) {
-                yield result;
-                continue;
-            }
-
-            const { privateKey: serialized, name } = result;
-
-            try {
-                const bundle = Bundle.deserialize(
-                    new Uint8ArrayExactReadable(serialized),
-                );
-
-                const prfOutput = await this.#source.get(
-                    bundle.id as Uint8Array<ArrayBuffer>,
-                    bundle.prfInput as Uint8Array<ArrayBuffer>,
-                );
-
-                this.#prevId = bundle.id as Uint8Array<ArrayBuffer>;
-
-                let aesKey: CryptoKey;
-                try {
-                    aesKey = await deriveAesKey(
-                        prfOutput,
-                        bundle.hkdfInfo as Uint8Array<ArrayBuffer>,
-                        bundle.hkdfSalt as Uint8Array<ArrayBuffer>,
-                    );
-                } finally {
-                    // Clear secret memory
-                    toUint8Array(prfOutput).fill(0);
-                }
-
-                const decrypted = await crypto.subtle.decrypt(
-                    {
-                        name: "AES-GCM",
-                        iv: bundle.aesIv as Uint8Array<ArrayBuffer>,
-                    },
-                    aesKey,
-                    bundle.encrypted as Uint8Array<ArrayBuffer>,
-                );
-
-                try {
-                    yield { privateKey: new Uint8Array(decrypted), name };
-                } finally {
-                    // Clear secret memory
-                    // Caller is not allowed to use `decrypted` after `yield` returns
-                    new Uint8Array(decrypted).fill(0);
-                }
-            } catch (e) {
-                yield e instanceof Error
-                    ? e
-                    : new Error(String(e), { cause: e });
-            }
+        try {
+          yield { privateKey: new Uint8Array(decrypted), name };
+        } finally {
+          // Clear secret memory
+          // Caller is not allowed to use `decrypted` after `yield` returns
+          new Uint8Array(decrypted).fill(0);
         }
+      } catch (e) {
+        yield e instanceof Error ? e : new Error(String(e), { cause: e });
+      }
     }
+  }
 }

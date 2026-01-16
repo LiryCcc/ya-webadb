@@ -1,8 +1,8 @@
-import type { Init } from "./init.js";
-import { PrevImpl } from "./prev.js";
+import type { Init } from './init.js';
+import { PrevImpl } from './prev.js';
 
 export const Defaults = {
-    ...PrevImpl.Defaults,
-    video: true,
-    audioSource: "output",
+  ...PrevImpl.Defaults,
+  video: true,
+  audioSource: 'output'
 } as const satisfies Required<Init<true>>;

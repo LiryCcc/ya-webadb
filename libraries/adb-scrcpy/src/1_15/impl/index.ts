@@ -1,2 +1,2 @@
-export * from "./create-connection.js";
-export * from "./get-displays.js";
+export * from './create-connection.js';
+export * from './get-displays.js';

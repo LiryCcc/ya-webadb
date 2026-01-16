@@ -1,13 +1,13 @@
 {
-    "references": [
-        {
-            "path": "./tsconfig.build.json"
-        },
-        {
-            "path": "./tsconfig.test.json"
-        },
-        {
-            "path": "../no-data-view/tsconfig.build.json"
-        },
-    ]
+  "references": [
+    {
+      "path": "./tsconfig.build.json"
+    },
+    {
+      "path": "./tsconfig.test.json"
+    },
+    {
+      "path": "../no-data-view/tsconfig.build.json"
+    }
+  ]
 }

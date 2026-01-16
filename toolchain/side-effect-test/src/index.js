@@ -1,2 +1,2 @@
-export { default as Adb } from "./adb.js";
-export { default as Scrcpy } from "./scrcpy.js";
+export { default as Adb } from './adb.js';
+export { default as Scrcpy } from './scrcpy.js';

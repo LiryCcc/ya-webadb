@@ -1,5 +1,5 @@
 ---
-"@yume-chan/scrcpy": major
+'@yume-chan/scrcpy': major
 ---
 
 Convert `ScrcpyOptionsX_YY.prototype.controlMessageTypes` to a mapping from internal control message types to version-specific values.
